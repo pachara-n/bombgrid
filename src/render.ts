@@ -1,8 +1,8 @@
 // Renders a plan (from planner.ts) into a self-contained animated SVG string.
-// No scripts: CSS keyframes + SMIL only, so it works inside <img> on GitHub.
+// No scripts: CSS keyframes only (no SMIL), so it works inside <img> on GitHub.
 //
 // Techniques that must not be broken (see README "How it works"):
-//  - the character is ONE <animateMotion> on a polyline; pauses are encoded with keyPoints/keyTimes
+//  - the character is moved by a CSS @keyframes of translate() so the whole picture shares one clock (no SMIL)
 //  - every block has its own @keyframes, with percentages taken from the hit time over the loop length
 //  - one-shot effects use a POSITIVE animation-delay (= event time), base opacity 0 and infinite repeat,
 //    which keeps them in sync on every loop. Never use animation-fill-mode: backwards for this.
@@ -56,7 +56,7 @@ export const PALETTES: Record<Theme, Palette> = {
 };
 
 // The character: a round white helmet with a blue visor, two eyes, a pink antenna ball, and two little feet.
-// It is drawn around (0,0) so animateMotion can place it on any cell centre.
+// It is drawn around (0,0) so a CSS translate() can place it on any cell centre.
 const sprite = () =>
   '<ellipse cx="-2.2" cy="4.6" rx="1.7" ry="1.1" fill="#3b4a6b"/><ellipse cx="2.2" cy="4.6" rx="1.7" ry="1.1" fill="#3b4a6b"/>' +
   '<circle r="4.7" fill="#f5f7fa" stroke="#3b4a6b" stroke-width="1"/><rect x="-3.6" y="1" width="7.2" height="2.4" rx="1.2" fill="#4c6fff"/>' +
@@ -175,38 +175,40 @@ export function renderSvg(weeks: Grid, lvl: LevelFn, plan: Plan, theme: Theme | 
   });
 
   // --- the character -------------------------------------------------------------------------------
-  // Constant speed along the path; pauses are encoded by repeating positions in keyPoints/keyTimes.
+  // The character is moved by a CSS animation, like everything else, so the whole picture runs on ONE
+  // clock. (An earlier version used SMIL <animateMotion>; SMIL and CSS clocks start independently, so the
+  // character could be a little ahead of or behind the bombs and flames.)
+  // Every point of the walk becomes a keyframe. Straight runs at constant speed are merged into one
+  // segment, because the browser interpolates linearly between keyframes anyway; pauses stay as two
+  // keyframes with the same position.
+  const pt = (m: [number, number, number]): [number, number, number] => [m[0], m[1] * STEP + 5.5, m[2] * STEP + 5.5];
+  const pts = plan.moves.map(pt);
   let walker: string;
-  if (plan.moves.length < 2) {
-    const m = plan.moves[0];
-    walker = `<g class="w" transform="translate(${m[1] * STEP + 5.5},${m[2] * STEP + 5.5})">${sprite()}</g>`;
+  if (pts.length < 2) {
+    walker = `<g class="w" transform="translate(${pts[0][1]},${pts[0][2]})">${sprite()}</g>`;
   } else {
-    let path = "",
-      cum = 0,
-      prev: [number, number] | null = null;
-    const kp: number[] = [],
-      kt: number[] = [];
-    plan.moves.forEach((m, i) => {
-      const x = m[1] * STEP + 5.5,
-        y = m[2] * STEP + 5.5;
-      if (i === 0) path = `M${x},${y}`;
-      else {
-        path += ` L${x},${y}`;
-        cum += Math.abs(x - prev![0]) + Math.abs(y - prev![1]);
-      }
-      prev = [x, y];
-      kp.push(cum);
-      kt.push(m[0]);
-    });
-    const kpS = kp
-      .map((v) => (cum ? v / cum : 0).toFixed(5))
-      .concat(["1"])
-      .join(";");
-    const ktS = kt
-      .map((v) => Math.min(v / C, 0.99999).toFixed(5))
-      .concat(["1"])
-      .join(";");
-    walker = `<g class="w"><animateMotion dur="${CS}s" repeatCount="indefinite" calcMode="linear" keyPoints="${kpS}" keyTimes="${ktS}" path="${path}"/><g><animateTransform attributeName="transform" type="translate" values="0,0;0,-0.8;0,0" dur="0.2s" repeatCount="indefinite"/>${sprite()}</g></g>`;
+    const kept: [number, number, number][] = [pts[0]];
+    for (let i = 1; i < pts.length - 1; i++) {
+      const a = kept[kept.length - 1],
+        b = pts[i],
+        c = pts[i + 1];
+      const dt1 = b[0] - a[0],
+        dt2 = c[0] - b[0];
+      // same velocity before and after this point => it is on a straight constant-speed run
+      const same =
+        dt1 > 1e-9 &&
+        dt2 > 1e-9 &&
+        Math.abs((b[1] - a[1]) / dt1 - (c[1] - b[1]) / dt2) < 1e-6 &&
+        Math.abs((b[2] - a[2]) / dt1 - (c[2] - b[2]) / dt2) < 1e-6;
+      if (!same) kept.push(b);
+    }
+    kept.push(pts[pts.length - 1]);
+    const frame = ([t, x, y]: [number, number, number]) =>
+      `${+((t / C) * 100).toFixed(3)}%{transform:translate(${x}px,${y}px)}`;
+    // it stands on its last cell until the loop restarts
+    const last = kept[kept.length - 1];
+    css += `@keyframes walk{${kept.map(frame).join("")}100%{transform:translate(${last[1]}px,${last[2]}px)}}`;
+    walker = `<g class="w">${sprite()}</g>`;
   }
 
   // --- assemble ------------------------------------------------------------------------------------
@@ -216,7 +218,7 @@ export function renderSvg(weeks: Grid, lvl: LevelFn, plan: Plan, theme: Theme | 
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -4 ${W + 8} ${H + 34}" width="${+((W + 8) * scale).toFixed(2)}" height="${+((H + 34) * scale).toFixed(2)}" role="img"><title>Commit Bomberman</title><desc>${DESC(total)}</desc><style>` +
     `.l0{fill:${P.l0}}.l1{fill:${P.l1}}.l2{fill:${P.l2}}.l3{fill:${P.l3}}.l4{fill:${P.l4}}.in{fill:none;stroke:rgba(255,255,255,.4);stroke-width:1}.crk{fill:none;stroke:${P.crk};stroke-width:1;stroke-linecap:round;opacity:0}` +
-    `.c{transform-box:fill-box;transform-origin:center}.bb{fill:${P.bomb};stroke:${P.bombStroke};stroke-width:1}.tx{fill:${P.tx};font:500 13px sans-serif}.fo{fill:#ff8a1f}.fi{fill:#ffe27a}` +
+    `.w{animation:walk ${CS}s linear infinite}.c{transform-box:fill-box;transform-origin:center}.bb{fill:${P.bomb};stroke:${P.bombStroke};stroke-width:1}.tx{fill:${P.tx};font:500 13px sans-serif}.fo{fill:#ff8a1f}.fi{fill:#ffe27a}` +
     `.s{opacity:0;transform-box:fill-box;transform-origin:center;animation-duration:${CS}s;animation-iteration-count:infinite;animation-timing-function:ease-out}.d1{animation-name:sh1}.d2{animation-name:sh2}.d3{animation-name:sh3}.d4{animation-name:sh4}` +
     `.fx{opacity:0;animation:fx ${CS}s linear infinite}@keyframes fx{0%{opacity:1}${(FW * 0.6).toFixed(3)}%{opacity:1}${FW.toFixed(3)}%{opacity:0}100%{opacity:0}}` +
     `.bm{opacity:0;animation-iteration-count:infinite;animation-timing-function:linear}.shd{fill:rgba(76,201,240,.2);stroke:#4cc9f0;stroke-width:1;opacity:0;animation-iteration-count:infinite;animation-timing-function:linear}.pl{transform-box:fill-box;transform-origin:center;animation:pulse .28s ease-in-out infinite alternate}@keyframes pulse{from{transform:scale(1)}to{transform:scale(1.18)}}.spk{fill:#ffb02e;animation:blink .16s steps(2) infinite}@keyframes blink{50%{opacity:.2}}` +
@@ -225,7 +227,7 @@ export function renderSvg(weeks: Grid, lvl: LevelFn, plan: Plan, theme: Theme | 
     css +
     // Reduced motion: no animation at all. The board is shown as a plain contribution graph, because
     // everything that appears during the game (bombs, flames, debris, caption) has opacity 0 by default.
-    // SMIL cannot be switched off from CSS, so the character is hidden instead.
+    // The character is hidden because it would otherwise stand still on top of the board.
     `@media (prefers-reduced-motion:reduce){*{animation:none!important}.w{display:none}}` +
     `</style>` +
     floor +

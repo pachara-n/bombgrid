@@ -1,7 +1,7 @@
 # bombgrid
 
 Turns your GitHub contribution graph into a tiny animated Bomberman level. A character walks the board, drops
-bombs, and blows up your commit blocks one by one. The result is a plain SVG (CSS + SMIL, no scripts, no GIF), so it
+bombs, and blows up your commit blocks one by one. The result is a plain SVG (CSS animations only, no scripts, no GIF), so it
 works inside a profile README.
 
 <picture>

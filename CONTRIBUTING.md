@@ -21,7 +21,7 @@ Node 20 or newer is required.
 
 ## Ground rules
 
-- The renderer must stay pure SVG: CSS keyframes and SMIL, no scripts.
+- The renderer must stay pure SVG: CSS keyframes only (one clock for everything, no SMIL), no scripts.
 - Do not copy code, art or text from other projects.
 - Please say clearly what you tested and what you did not.
 

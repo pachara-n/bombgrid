@@ -123,3 +123,62 @@ test("SVG carries a description and a reduced-motion fallback", () => {
   assert.match(svg, /@media \(prefers-reduced-motion:reduce\)\{\*\{animation:none!important\}\.w\{display:none\}\}/);
   assert.match(svg, /class="w"/);
 });
+
+// Reads the @keyframes walk{...} of an SVG back into [percent, x, y] points.
+function readWalk(svg: string): [number, number, number][] {
+  const body = /@keyframes walk\{(.*?\))\}\}/.exec(svg)?.[0] ?? "";
+  return [...body.matchAll(/([\d.]+)%\{transform:translate\(([\d.]+)px,([\d.]+)px\)\}/g)].map((m) => [
+    +m[1],
+    +m[2],
+    +m[3],
+  ]);
+}
+
+test("the character walks on the same CSS clock as everything else", () => {
+  const g = randomGrid(0.5, 20);
+  const lvl = levelsFor(g);
+  const plan = fitDuration(planBomber(g, lvl), 45);
+  const svg = renderSvg(g, lvl, plan, "light");
+  assert.ok(
+    !/animateMotion|animateTransform|keyPoints/.test(svg),
+    "no SMIL: a second clock can drift from the CSS one",
+  );
+
+  const frames = readWalk(svg);
+  assert.ok(frames.length >= 2);
+  for (let i = 1; i < frames.length; i++) assert.ok(frames[i][0] >= frames[i - 1][0], "percentages must not go back");
+  assert.equal(frames[0][0], 0);
+  assert.equal(frames[frames.length - 1][0], 100);
+
+  // reading the keyframes back (linear in between) must give the planned position at every planned time
+  const C = plan.T + 3.5;
+  const at = (pct: number) => {
+    for (let i = 0; i < frames.length - 1; i++) {
+      const [p0, x0, y0] = frames[i],
+        [p1, x1, y1] = frames[i + 1];
+      if (pct >= p0 && pct <= p1) {
+        const f = p1 > p0 ? (pct - p0) / (p1 - p0) : 0;
+        return [x0 + (x1 - x0) * f, y0 + (y1 - y0) * f];
+      }
+    }
+    return [frames[frames.length - 1][1], frames[frames.length - 1][2]];
+  };
+  for (const [t, c, r] of plan.moves) {
+    const [x, y] = at((t / C) * 100);
+    // keyframe percentages are rounded to 0.001% (about 0.4 ms), so allow a small slack in cells
+    assert.ok(
+      Math.abs(x - (c * 14 + 5.5)) < 0.1 && Math.abs(y - (r * 14 + 5.5)) < 0.1,
+      `move at ${t.toFixed(2)}s is off`,
+    );
+  }
+});
+
+test("the character stands still at the end of the loop", () => {
+  const g = randomGrid(0.3, 20);
+  const lvl = levelsFor(g);
+  const svg = renderSvg(g, lvl, fitDuration(planBomber(g, lvl), 45), "light");
+  const frames = readWalk(svg);
+  const [, x, y] = frames[frames.length - 1];
+  const [, px, py] = frames[frames.length - 2];
+  assert.deepEqual([x, y], [px, py], "the 100% keyframe repeats the last position, so there is no drift or bounce");
+});
