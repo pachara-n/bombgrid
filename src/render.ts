@@ -13,6 +13,8 @@ import type { Grid, LevelFn, Plan, Theme } from "./types.ts";
 const STEP = 14,
   CELL = 11,
   HOLD = 3.5;
+// above this many blocks only 2 debris shards are drawn per block (the file would get too big otherwise)
+const BUSY_BLOCKS = 250;
 
 export interface Palette {
   l0: string;
@@ -53,12 +55,17 @@ export const PALETTES: Record<Theme, Palette> = {
   },
 };
 
-// Placeholder character: a round white head, blue visor, two eyes and a pink antenna.
+// The character: a round white helmet with a blue visor, two eyes, a pink antenna ball, and two little feet.
+// It is drawn around (0,0) so animateMotion can place it on any cell centre.
 const sprite = () =>
+  '<ellipse cx="-2.2" cy="4.6" rx="1.7" ry="1.1" fill="#3b4a6b"/><ellipse cx="2.2" cy="4.6" rx="1.7" ry="1.1" fill="#3b4a6b"/>' +
   '<circle r="4.7" fill="#f5f7fa" stroke="#3b4a6b" stroke-width="1"/><rect x="-3.6" y="1" width="7.2" height="2.4" rx="1.2" fill="#4c6fff"/>' +
-  '<circle cx="-1.6" cy="-0.8" r="0.8" fill="#222"/><circle cx="1.6" cy="-0.8" r="0.8" fill="#222"/><circle cy="-5.6" r="1.5" fill="#ff4d6d"/>';
+  '<circle cx="-1.6" cy="-0.8" r="0.8" fill="#222"/><circle cx="1.6" cy="-0.8" r="0.8" fill="#222"/>' +
+  '<path d="M0,-4.6 L0,-5.8" stroke="#3b4a6b" stroke-width="0.8"/><circle cy="-6.2" r="1.5" fill="#ff4d6d"/>';
 
-// `theme` is either a built-in theme name or a full custom palette.
+const DESC = (total: number) =>
+  `An animated Bomberman level built from a GitHub contribution graph (${total} contributions). A character places bombs that blow up the commit blocks, one by one, until the board is clear.`;
+
 export function renderSvg(weeks: Grid, lvl: LevelFn, plan: Plan, theme: Theme | Palette = "light"): string {
   const P = typeof theme === "string" ? PALETTES[theme] : theme;
   const W = COLS * STEP,
@@ -78,6 +85,9 @@ export function renderSvg(weeks: Grid, lvl: LevelFn, plan: Plan, theme: Theme | 
     debris = "",
     total = 0;
   const WIN = ((0.8 / C) * 100).toFixed(2); // how long debris flies, as a % of the loop
+  let blockCount = 0;
+  for (const col of weeks) for (const n of col) if (n !== null && n > 0) blockCount++;
+  const shards = blockCount > BUSY_BLOCKS ? 2 : 4;
 
   // --- floor, blocks and debris ------------------------------------------------------------------
   for (let i = 0; i < COLS; i++)
@@ -113,9 +123,9 @@ export function renderSvg(weeks: Grid, lvl: LevelFn, plan: Plan, theme: Theme | 
       }
       blocksSvg += `<g class="c" style="animation:b${key} ${CS}s linear infinite"><rect class="l${L}" x="${bx}" y="${by}" width="${CELL}" height="${CELL}" rx="2"/><rect class="in" x="${bx + 2}" y="${by + 2}" width="7" height="7" rx="1"/>${crack}</g>`;
 
-      // four shards fly out when the block is finally destroyed
+      // shards fly out when the block is finally destroyed (fewer on busy boards to keep the file small)
       const td = ev[ev.length - 1].toFixed(2);
-      for (let s = 1; s <= 4; s++)
+      for (let s = 1; s <= shards; s++)
         debris += `<rect class="s d${s} l${L}" x="${bx + 4}" y="${by + 4}" width="3.5" height="3.5" rx="0.8" style="animation-delay:${td}s"/>`;
     }
 
@@ -167,7 +177,7 @@ export function renderSvg(weeks: Grid, lvl: LevelFn, plan: Plan, theme: Theme | 
   let walker: string;
   if (plan.moves.length < 2) {
     const m = plan.moves[0];
-    walker = `<g transform="translate(${m[1] * STEP + 5.5},${m[2] * STEP + 5.5})">${sprite()}</g>`;
+    walker = `<g class="w" transform="translate(${m[1] * STEP + 5.5},${m[2] * STEP + 5.5})">${sprite()}</g>`;
   } else {
     let path = "",
       cum = 0,
@@ -187,14 +197,14 @@ export function renderSvg(weeks: Grid, lvl: LevelFn, plan: Plan, theme: Theme | 
       kt.push(m[0]);
     });
     const kpS = kp
-      .map((v) => (cum ? v / cum : 0).toFixed(6))
-      .concat(["1.000000"])
-      .join(";");
-    const ktS = kt
-      .map((v) => Math.min(v / C, 0.999999).toFixed(6))
+      .map((v) => (cum ? v / cum : 0).toFixed(5))
       .concat(["1"])
       .join(";");
-    walker = `<g><animateMotion dur="${CS}s" repeatCount="indefinite" calcMode="linear" keyPoints="${kpS}" keyTimes="${ktS}" path="${path}"/><g><animateTransform attributeName="transform" type="translate" values="0,0;0,-0.8;0,0" dur="0.2s" repeatCount="indefinite"/>${sprite()}</g></g>`;
+    const ktS = kt
+      .map((v) => Math.min(v / C, 0.99999).toFixed(5))
+      .concat(["1"])
+      .join(";");
+    walker = `<g class="w"><animateMotion dur="${CS}s" repeatCount="indefinite" calcMode="linear" keyPoints="${kpS}" keyTimes="${ktS}" path="${path}"/><g><animateTransform attributeName="transform" type="translate" values="0,0;0,-0.8;0,0" dur="0.2s" repeatCount="indefinite"/>${sprite()}</g></g>`;
   }
 
   // --- assemble ------------------------------------------------------------------------------------
@@ -202,7 +212,7 @@ export function renderSvg(weeks: Grid, lvl: LevelFn, plan: Plan, theme: Theme | 
     fin2 = (F * 100 + 3).toFixed(1);
   const totalStr = String(total).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   return (
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -4 ${W + 8} ${H + 34}" width="${W + 8}" height="${H + 34}" role="img"><title>Commit Bomberman</title><style>` +
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -4 ${W + 8} ${H + 34}" width="${W + 8}" height="${H + 34}" role="img"><title>Commit Bomberman</title><desc>${DESC(total)}</desc><style>` +
     `.l0{fill:${P.l0}}.l1{fill:${P.l1}}.l2{fill:${P.l2}}.l3{fill:${P.l3}}.l4{fill:${P.l4}}.in{fill:none;stroke:rgba(255,255,255,.4);stroke-width:1}.crk{fill:none;stroke:${P.crk};stroke-width:1;stroke-linecap:round;opacity:0}` +
     `.c{transform-box:fill-box;transform-origin:center}.bb{fill:${P.bomb};stroke:${P.bombStroke};stroke-width:1}.tx{fill:${P.tx};font:500 13px sans-serif}.fo{fill:#ff8a1f}.fi{fill:#ffe27a}` +
     `.s{opacity:0;transform-box:fill-box;transform-origin:center;animation-duration:${CS}s;animation-iteration-count:infinite;animation-timing-function:ease-out}.d1{animation-name:sh1}.d2{animation-name:sh2}.d3{animation-name:sh3}.d4{animation-name:sh4}` +
@@ -211,6 +221,10 @@ export function renderSvg(weeks: Grid, lvl: LevelFn, plan: Plan, theme: Theme | 
     `.fin{opacity:0;animation:fin ${CS}s linear infinite}@keyframes fin{0%,${fin}%{opacity:0}${fin2}%,96%{opacity:1}100%{opacity:0}}` +
     shKf +
     css +
+    // Reduced motion: no animation at all. The board is shown as a plain contribution graph, because
+    // everything that appears during the game (bombs, flames, debris, caption) has opacity 0 by default.
+    // SMIL cannot be switched off from CSS, so the character is hidden instead.
+    `@media (prefers-reduced-motion:reduce){*{animation:none!important}.w{display:none}}` +
     `</style>` +
     floor +
     blocksSvg +

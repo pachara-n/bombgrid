@@ -106,3 +106,20 @@ test("level 4 blocks need two hits", () => {
     [1, 0],
   );
 });
+
+test("busy boards use fewer debris shards so the SVG stays small", () => {
+  const dense = grid(() => 1 + Math.floor(rnd() * 10));
+  const lvl = levelsFor(dense);
+  const svg = renderSvg(dense, lvl, fitDuration(planBomber(dense, lvl), 45), "light");
+  assert.equal(svg.match(/class="s d3/g), null, "no third or fourth shard on a busy board");
+  assert.ok(svg.length / 1024 < 450, `${(svg.length / 1024).toFixed(0)} KB is over the 450 KB budget for a full board`);
+});
+
+test("SVG carries a description and a reduced-motion fallback", () => {
+  const g = grid((c, r) => (c === 10 && r === 3 ? 1 : 0));
+  const lvl = levelsFor(g);
+  const svg = renderSvg(g, lvl, planBomber(g, lvl), "light");
+  assert.match(svg, /<desc>[^<]+<\/desc>/);
+  assert.match(svg, /@media \(prefers-reduced-motion:reduce\)\{\*\{animation:none!important\}\.w\{display:none\}\}/);
+  assert.match(svg, /class="w"/);
+});

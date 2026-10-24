@@ -20044,6 +20044,7 @@ function fitDuration(plan, maxSeconds = 45) {
 var STEP = 14;
 var CELL = 11;
 var HOLD = 3.5;
+var BUSY_BLOCKS = 250;
 var PALETTES = {
   light: {
     l0: "#ebedf0",
@@ -20068,7 +20069,8 @@ var PALETTES = {
     tx: "#9da7b3"
   }
 };
-var sprite = () => '<circle r="4.7" fill="#f5f7fa" stroke="#3b4a6b" stroke-width="1"/><rect x="-3.6" y="1" width="7.2" height="2.4" rx="1.2" fill="#4c6fff"/><circle cx="-1.6" cy="-0.8" r="0.8" fill="#222"/><circle cx="1.6" cy="-0.8" r="0.8" fill="#222"/><circle cy="-5.6" r="1.5" fill="#ff4d6d"/>';
+var sprite = () => '<ellipse cx="-2.2" cy="4.6" rx="1.7" ry="1.1" fill="#3b4a6b"/><ellipse cx="2.2" cy="4.6" rx="1.7" ry="1.1" fill="#3b4a6b"/><circle r="4.7" fill="#f5f7fa" stroke="#3b4a6b" stroke-width="1"/><rect x="-3.6" y="1" width="7.2" height="2.4" rx="1.2" fill="#4c6fff"/><circle cx="-1.6" cy="-0.8" r="0.8" fill="#222"/><circle cx="1.6" cy="-0.8" r="0.8" fill="#222"/><path d="M0,-4.6 L0,-5.8" stroke="#3b4a6b" stroke-width="0.8"/><circle cy="-6.2" r="1.5" fill="#ff4d6d"/>';
+var DESC = (total) => `An animated Bomberman level built from a GitHub contribution graph (${total} contributions). A character places bombs that blow up the commit blocks, one by one, until the board is clear.`;
 function renderSvg(weeks, lvl, plan, theme = "light") {
   const P = typeof theme === "string" ? PALETTES[theme] : theme;
   const W = COLS * STEP, H = ROWS * STEP;
@@ -20077,6 +20079,9 @@ function renderSvg(weeks, lvl, plan, theme = "light") {
   for (const e of plan.blockEv) (evBy[e.c * ROWS + e.r] ||= []).push(e.t);
   let floor = "", blocksSvg = "", css = "", debris = "", total = 0;
   const WIN = (0.8 / C * 100).toFixed(2);
+  let blockCount = 0;
+  for (const col of weeks) for (const n of col) if (n !== null && n > 0) blockCount++;
+  const shards = blockCount > BUSY_BLOCKS ? 2 : 4;
   for (let i = 0; i < COLS; i++)
     for (let r = 0; r < ROWS; r++) {
       const n = weeks[i][r];
@@ -20101,7 +20106,7 @@ function renderSvg(weeks, lvl, plan, theme = "light") {
       }
       blocksSvg += `<g class="c" style="animation:b${key} ${CS}s linear infinite"><rect class="l${L}" x="${bx}" y="${by}" width="${CELL}" height="${CELL}" rx="2"/><rect class="in" x="${bx + 2}" y="${by + 2}" width="7" height="7" rx="1"/>${crack}</g>`;
       const td = ev[ev.length - 1].toFixed(2);
-      for (let s = 1; s <= 4; s++)
+      for (let s = 1; s <= shards; s++)
         debris += `<rect class="s d${s} l${L}" x="${bx + 4}" y="${by + 4}" width="3.5" height="3.5" rx="0.8" style="animation-delay:${td}s"/>`;
     }
   const dirs = [
@@ -20131,7 +20136,7 @@ function renderSvg(weeks, lvl, plan, theme = "light") {
   let walker;
   if (plan.moves.length < 2) {
     const m = plan.moves[0];
-    walker = `<g transform="translate(${m[1] * STEP + 5.5},${m[2] * STEP + 5.5})">${sprite()}</g>`;
+    walker = `<g class="w" transform="translate(${m[1] * STEP + 5.5},${m[2] * STEP + 5.5})">${sprite()}</g>`;
   } else {
     let path = "", cum = 0, prev = null;
     const kp = [], kt = [];
@@ -20146,13 +20151,16 @@ function renderSvg(weeks, lvl, plan, theme = "light") {
       kp.push(cum);
       kt.push(m[0]);
     });
-    const kpS = kp.map((v) => (cum ? v / cum : 0).toFixed(6)).concat(["1.000000"]).join(";");
-    const ktS = kt.map((v) => Math.min(v / C, 0.999999).toFixed(6)).concat(["1"]).join(";");
-    walker = `<g><animateMotion dur="${CS}s" repeatCount="indefinite" calcMode="linear" keyPoints="${kpS}" keyTimes="${ktS}" path="${path}"/><g><animateTransform attributeName="transform" type="translate" values="0,0;0,-0.8;0,0" dur="0.2s" repeatCount="indefinite"/>${sprite()}</g></g>`;
+    const kpS = kp.map((v) => (cum ? v / cum : 0).toFixed(5)).concat(["1"]).join(";");
+    const ktS = kt.map((v) => Math.min(v / C, 0.99999).toFixed(5)).concat(["1"]).join(";");
+    walker = `<g class="w"><animateMotion dur="${CS}s" repeatCount="indefinite" calcMode="linear" keyPoints="${kpS}" keyTimes="${ktS}" path="${path}"/><g><animateTransform attributeName="transform" type="translate" values="0,0;0,-0.8;0,0" dur="0.2s" repeatCount="indefinite"/>${sprite()}</g></g>`;
   }
   const fin = (F * 100).toFixed(1), fin2 = (F * 100 + 3).toFixed(1);
   const totalStr = String(total).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -4 ${W + 8} ${H + 34}" width="${W + 8}" height="${H + 34}" role="img"><title>Commit Bomberman</title><style>.l0{fill:${P.l0}}.l1{fill:${P.l1}}.l2{fill:${P.l2}}.l3{fill:${P.l3}}.l4{fill:${P.l4}}.in{fill:none;stroke:rgba(255,255,255,.4);stroke-width:1}.crk{fill:none;stroke:${P.crk};stroke-width:1;stroke-linecap:round;opacity:0}.c{transform-box:fill-box;transform-origin:center}.bb{fill:${P.bomb};stroke:${P.bombStroke};stroke-width:1}.tx{fill:${P.tx};font:500 13px sans-serif}.fo{fill:#ff8a1f}.fi{fill:#ffe27a}.s{opacity:0;transform-box:fill-box;transform-origin:center;animation-duration:${CS}s;animation-iteration-count:infinite;animation-timing-function:ease-out}.d1{animation-name:sh1}.d2{animation-name:sh2}.d3{animation-name:sh3}.d4{animation-name:sh4}.fx{opacity:0;animation:fx ${CS}s linear infinite}@keyframes fx{0%{opacity:1}${(FW * 0.6).toFixed(3)}%{opacity:1}${FW.toFixed(3)}%{opacity:0}100%{opacity:0}}.bm{opacity:0;animation-iteration-count:infinite;animation-timing-function:linear}.shd{fill:rgba(76,201,240,.2);stroke:#4cc9f0;stroke-width:1;opacity:0;animation-iteration-count:infinite;animation-timing-function:linear}.pl{transform-box:fill-box;transform-origin:center;animation:pulse .28s ease-in-out infinite alternate}@keyframes pulse{from{transform:scale(1)}to{transform:scale(1.18)}}.spk{fill:#ffb02e;animation:blink .16s steps(2) infinite}@keyframes blink{50%{opacity:.2}}.fin{opacity:0;animation:fin ${CS}s linear infinite}@keyframes fin{0%,${fin}%{opacity:0}${fin2}%,96%{opacity:1}100%{opacity:0}}` + shKf + css + `</style>` + floor + blocksSvg + debris + fx + bombs + walker + shields + `<text class="tx fin" x="${W / 2}" y="${H + 22}" text-anchor="middle">all clear &#183; ${totalStr} commits</text></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -4 ${W + 8} ${H + 34}" width="${W + 8}" height="${H + 34}" role="img"><title>Commit Bomberman</title><desc>${DESC(total)}</desc><style>.l0{fill:${P.l0}}.l1{fill:${P.l1}}.l2{fill:${P.l2}}.l3{fill:${P.l3}}.l4{fill:${P.l4}}.in{fill:none;stroke:rgba(255,255,255,.4);stroke-width:1}.crk{fill:none;stroke:${P.crk};stroke-width:1;stroke-linecap:round;opacity:0}.c{transform-box:fill-box;transform-origin:center}.bb{fill:${P.bomb};stroke:${P.bombStroke};stroke-width:1}.tx{fill:${P.tx};font:500 13px sans-serif}.fo{fill:#ff8a1f}.fi{fill:#ffe27a}.s{opacity:0;transform-box:fill-box;transform-origin:center;animation-duration:${CS}s;animation-iteration-count:infinite;animation-timing-function:ease-out}.d1{animation-name:sh1}.d2{animation-name:sh2}.d3{animation-name:sh3}.d4{animation-name:sh4}.fx{opacity:0;animation:fx ${CS}s linear infinite}@keyframes fx{0%{opacity:1}${(FW * 0.6).toFixed(3)}%{opacity:1}${FW.toFixed(3)}%{opacity:0}100%{opacity:0}}.bm{opacity:0;animation-iteration-count:infinite;animation-timing-function:linear}.shd{fill:rgba(76,201,240,.2);stroke:#4cc9f0;stroke-width:1;opacity:0;animation-iteration-count:infinite;animation-timing-function:linear}.pl{transform-box:fill-box;transform-origin:center;animation:pulse .28s ease-in-out infinite alternate}@keyframes pulse{from{transform:scale(1)}to{transform:scale(1.18)}}.spk{fill:#ffb02e;animation:blink .16s steps(2) infinite}@keyframes blink{50%{opacity:.2}}.fin{opacity:0;animation:fin ${CS}s linear infinite}@keyframes fin{0%,${fin}%{opacity:0}${fin2}%,96%{opacity:1}100%{opacity:0}}` + shKf + css + // Reduced motion: no animation at all. The board is shown as a plain contribution graph, because
+  // everything that appears during the game (bombs, flames, debris, caption) has opacity 0 by default.
+  // SMIL cannot be switched off from CSS, so the character is hidden instead.
+  `@media (prefers-reduced-motion:reduce){*{animation:none!important}.w{display:none}}</style>` + floor + blocksSvg + debris + fx + bombs + walker + shields + `<text class="tx fin" x="${W / 2}" y="${H + 22}" text-anchor="middle">all clear &#183; ${totalStr} commits</text></svg>`;
 }
 
 // src/generate.ts
