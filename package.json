@@ -1,6 +1,6 @@
 {
   "name": "bombgrid",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Turn your GitHub contribution graph into an animated Bomberman level (pure SVG).",
   "license": "MIT",
   "private": true,
