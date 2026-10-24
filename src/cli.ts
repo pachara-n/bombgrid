@@ -1,5 +1,6 @@
 // Local entry point.
 //   npm run generate -- --grid fixtures/pachara-n-grid.json --out dist     (offline, from a saved grid)
+//   add --scale 1.17 to make the image about as wide as a 16 px cell graph
 //   GH_USER=name [GH_TOKEN=...] npm run generate -- --out dist             (fetch from GitHub)
 // Writes <out>/bombgrid-light.svg and <out>/bombgrid-dark.svg.
 import { readFileSync } from "node:fs";
@@ -16,10 +17,14 @@ const arg = (name: string, def?: string) => {
 const out = arg("--out", "dist")!;
 const gridFile = arg("--grid");
 const maxSeconds = arg("--max-seconds", "45")!;
+const scale = arg("--scale", "1")!;
 
 let weeks, levels, source: string;
 if (gridFile) {
-  weeks = normalizeGrid(JSON.parse(readFileSync(gridFile, "utf8")));
+  // a file is either a plain [col][row] array of counts, or { counts, levels } with GitHub's own shades
+  const saved = JSON.parse(readFileSync(gridFile, "utf8"));
+  weeks = normalizeGrid(Array.isArray(saved) ? saved : saved.counts);
+  levels = !Array.isArray(saved) && saved.levels ? normalizeGrid(saved.levels) : undefined;
   source = gridFile;
 } else {
   const user = process.env.GH_USER || process.env.GITHUB_REPOSITORY_OWNER;
@@ -31,7 +36,7 @@ if (gridFile) {
 }
 
 const specs = parseOutputs(
-  `${out}/bombgrid-light.svg?palette=light&max_seconds=${maxSeconds}\n${out}/bombgrid-dark.svg?palette=dark&max_seconds=${maxSeconds}`,
+  `${out}/bombgrid-light.svg?palette=light&max_seconds=${maxSeconds}&scale=${scale}\n${out}/bombgrid-dark.svg?palette=dark&max_seconds=${maxSeconds}&scale=${scale}`,
 );
 const results = generateAll(weeks, specs, levels);
 console.log(`source=${source}`);

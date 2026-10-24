@@ -66,7 +66,9 @@ const sprite = () =>
 const DESC = (total: number) =>
   `An animated Bomberman level built from a GitHub contribution graph (${total} contributions). A character places bombs that blow up the commit blocks, one by one, until the board is clear.`;
 
-export function renderSvg(weeks: Grid, lvl: LevelFn, plan: Plan, theme: Theme | Palette = "light"): string {
+// `scale` only changes the size the image is shown at (width/height); the drawing itself uses a fixed
+// viewBox, so every shape and animation scales together and stays sharp.
+export function renderSvg(weeks: Grid, lvl: LevelFn, plan: Plan, theme: Theme | Palette = "light", scale = 1): string {
   const P = typeof theme === "string" ? PALETTES[theme] : theme;
   const W = COLS * STEP,
     H = ROWS * STEP;
@@ -212,7 +214,7 @@ export function renderSvg(weeks: Grid, lvl: LevelFn, plan: Plan, theme: Theme | 
     fin2 = (F * 100 + 3).toFixed(1);
   const totalStr = String(total).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   return (
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -4 ${W + 8} ${H + 34}" width="${W + 8}" height="${H + 34}" role="img"><title>Commit Bomberman</title><desc>${DESC(total)}</desc><style>` +
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -4 ${W + 8} ${H + 34}" width="${+((W + 8) * scale).toFixed(2)}" height="${+((H + 34) * scale).toFixed(2)}" role="img"><title>Commit Bomberman</title><desc>${DESC(total)}</desc><style>` +
     `.l0{fill:${P.l0}}.l1{fill:${P.l1}}.l2{fill:${P.l2}}.l3{fill:${P.l3}}.l4{fill:${P.l4}}.in{fill:none;stroke:rgba(255,255,255,.4);stroke-width:1}.crk{fill:none;stroke:${P.crk};stroke-width:1;stroke-linecap:round;opacity:0}` +
     `.c{transform-box:fill-box;transform-origin:center}.bb{fill:${P.bomb};stroke:${P.bombStroke};stroke-width:1}.tx{fill:${P.tx};font:500 13px sans-serif}.fo{fill:#ff8a1f}.fi{fill:#ffe27a}` +
     `.s{opacity:0;transform-box:fill-box;transform-origin:center;animation-duration:${CS}s;animation-iteration-count:infinite;animation-timing-function:ease-out}.d1{animation-name:sh1}.d2{animation-name:sh2}.d3{animation-name:sh3}.d4{animation-name:sh4}` +

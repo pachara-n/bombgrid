@@ -19,7 +19,7 @@ export function generateAll(weeks: Grid, specs: OutputSpec[], ghLevels?: Grid): 
   const lvl = levelsFromGitHub(weeks, ghLevels);
   return specs.map((spec) => {
     const plan = fitDuration(planBomber(weeks, lvl, { R: spec.radius }), spec.maxSeconds);
-    return { spec, plan, svg: renderSvg(weeks, lvl, plan, spec.palette) };
+    return { spec, plan, svg: renderSvg(weeks, lvl, plan, spec.palette, spec.scale) };
   });
 }
 

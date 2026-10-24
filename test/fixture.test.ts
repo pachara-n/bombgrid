@@ -18,6 +18,9 @@ const fixture = normalizeGrid(JSON.parse(readFileSync("fixtures/pachara-n-grid.j
 const SNAPSHOT_FILE = "test/fixture.snapshot.json";
 const specs = parseOutputs("light.svg?palette=light\ndark.svg?palette=dark");
 const [light, dark] = generateAll(fixture, specs);
+// the same profile saved together with GitHub's own shades (what the action gets from the API)
+const calendar = JSON.parse(readFileSync("fixtures/pachara-n-calendar.json", "utf8"));
+const withLevels = generateAll(normalizeGrid(calendar.counts), specs, normalizeGrid(calendar.levels));
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 
 // Budget for the real profile. Bigger SVGs load slower inside a README.
@@ -41,7 +44,12 @@ test("real grid: SVGs are well-formed and within the size budget", () => {
 });
 
 test("real grid: SVG output is unchanged (snapshot)", () => {
-  const actual = { light: sha(light.svg), dark: sha(dark.svg) };
+  const actual = {
+    light: sha(light.svg),
+    dark: sha(dark.svg),
+    calendarLight: sha(withLevels[0].svg),
+    calendarDark: sha(withLevels[1].svg),
+  };
   if (process.env.UPDATE_SNAPSHOT || !existsSync(SNAPSHOT_FILE)) {
     writeFileSync(SNAPSHOT_FILE, JSON.stringify(actual, null, 2) + "\n");
     return;
@@ -69,4 +77,20 @@ test("CLI smoke test: --grid writes both files", () => {
   for (const f of ["bombgrid-light.svg", "bombgrid-dark.svg"]) {
     assert.ok(readFileSync(join(out, f), "utf8").startsWith("<svg"), f);
   }
+});
+
+test("with GitHub levels every block gets the shade GitHub shows", () => {
+  const counts = normalizeGrid(calendar.counts);
+  const levels = normalizeGrid(calendar.levels);
+  const svg = withLevels[0].svg;
+  // blocks are drawn as <rect class="lN" .../> inside <g class="c">; count them per level
+  const drawn = [0, 0, 0, 0, 0];
+  for (const m of svg.matchAll(/<g class="c"[^>]*><rect class="l([1-4])"/g)) drawn[+m[1]]++;
+  const expected = [0, 0, 0, 0, 0];
+  counts.forEach((col, c) =>
+    col.forEach((n, r) => {
+      if (n && n > 0) expected[levels[c][r]!]++;
+    }),
+  );
+  assert.deepEqual(drawn, expected);
 });

@@ -2,6 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { parseOutputs } from "../src/options.ts";
 import { levelsFor, levelsFromGitHub } from "../src/levels.ts";
+import { planBomber } from "../src/planner.ts";
+import { renderSvg } from "../src/render.ts";
 import { grid } from "./helpers.ts";
 
 test("parses several lines with and without a query string", () => {
@@ -68,4 +70,22 @@ test("levelsFromGitHub falls back to our own rule without GitHub levels", () => 
     ),
     [1, 2, 4],
   );
+});
+
+test("scale only changes the shown size, not the drawing", () => {
+  const [a, b] = parseOutputs("a.svg\nb.svg?scale=1.5");
+  assert.equal(a.scale, 1);
+  assert.equal(b.scale, 1.5);
+  assert.throws(() => parseOutputs("x.svg?scale=0.1"), /scale/);
+  assert.throws(() => parseOutputs("x.svg?scale=9"), /scale/);
+
+  const g = grid((c, r) => (c === 10 && r === 3 ? 1 : 0));
+  const lvl = levelsFor(g);
+  const plan = planBomber(g, lvl);
+  const one = renderSvg(g, lvl, plan, "light", 1);
+  const big = renderSvg(g, lvl, plan, "light", 2);
+  assert.match(one, /viewBox="-4 -4 750 132" width="750" height="132"/);
+  assert.match(big, /viewBox="-4 -4 750 132" width="1500" height="264"/);
+  // everything after the opening tag is identical
+  assert.equal(one.slice(one.indexOf("role=")), big.slice(big.indexOf("role=")));
 });

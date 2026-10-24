@@ -13,12 +13,15 @@ export interface OutputSpec {
   maxSeconds: number;
   /** blast radius in cells */
   radius: number;
+  /** display size multiplier (1 = 750 px wide, about 1.17 matches the width of a 16 px cell graph) */
+  scale: number;
 }
 
 const HEX = /^[0-9a-fA-F]{6}$/;
 
 export const DEFAULT_MAX_SECONDS = 45;
 export const DEFAULT_RADIUS = 2;
+export const DEFAULT_SCALE = 1;
 
 export function parseOutputs(input: string): OutputSpec[] {
   const lines = input
@@ -62,7 +65,8 @@ function parseLine(line: string): OutputSpec {
 
   const maxSeconds = num(q.get("max_seconds"), DEFAULT_MAX_SECONDS, "max_seconds", path, 5, 120);
   const radius = Math.round(num(q.get("radius"), DEFAULT_RADIUS, "radius", path, 1, 6));
-  return { path, palette, paletteName, maxSeconds, radius };
+  const scale = num(q.get("scale"), DEFAULT_SCALE, "scale", path, 0.5, 4);
+  return { path, palette, paletteName, maxSeconds, radius, scale };
 }
 
 function num(raw: string | null, def: number, name: string, path: string, min: number, max: number): number {

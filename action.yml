@@ -14,7 +14,7 @@ inputs:
   outputs:
     description: |
       One output file per line, as `path[?options]`. Options: palette=light|dark, colors=<5 hex values>,
-      max_seconds=5..120 (default 45), radius=1..6 (default 2).
+      max_seconds=5..120 (default 45), radius=1..6 (default 2), scale=0.5..4 (default 1; 1.17 is about 880 px wide).
       Example:
         dist/bombgrid.svg
         dist/bombgrid-dark.svg?palette=dark

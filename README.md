@@ -63,12 +63,13 @@ works inside a profile README.
 
 Output options (after the `?`, joined with `&`):
 
-| Option        | Values                     | Default | Meaning                                                                 |
-| ------------- | -------------------------- | ------- | ----------------------------------------------------------------------- |
-| `palette`     | `light`, `dark`            | `light` | Colours of the board.                                                   |
-| `colors`      | 5 hex values, level 0 to 4 |         | Custom board colours, e.g. `colors=ebedf0,9be9a8,40c463,30a14e,216e39`. |
-| `max_seconds` | 5 to 120                   | `45`    | The loop is sped up so it never lasts longer than this.                 |
-| `radius`      | 1 to 6                     | `2`     | How many cells a blast reaches.                                         |
+| Option        | Values                     | Default | Meaning                                                                                                                                                            |
+| ------------- | -------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `palette`     | `light`, `dark`            | `light` | Colours of the board.                                                                                                                                              |
+| `colors`      | 5 hex values, level 0 to 4 |         | Custom board colours, e.g. `colors=ebedf0,9be9a8,40c463,30a14e,216e39`.                                                                                            |
+| `max_seconds` | 5 to 120                   | `45`    | The loop is sped up so it never lasts longer than this.                                                                                                            |
+| `radius`      | 1 to 6                     | `2`     | How many cells a blast reaches.                                                                                                                                    |
+| `scale`       | 0.5 to 4                   | `1`     | Size the image is shown at. `1` is 750 px wide, `1.17` is about 880 px, as wide as a graph drawn with 16 px cells. Only the size changes; the drawing stays sharp. |
 
 The action has one output, `files`: the written paths, one per line.
 
@@ -118,6 +119,7 @@ npm test                 # unit, property and smoke tests
 npm run typecheck && npm run lint
 npm run build            # bundles src/ into dist/index.js (commit the result)
 npm run generate -- --grid fixtures/pachara-n-grid.json --out out   # offline preview
+npm run generate -- --grid fixtures/pachara-n-calendar.json --out out --scale 1.17   # with GitHub shades, wider
 GH_USER=your-name npm run generate -- --out out                      # live data
 ```
 

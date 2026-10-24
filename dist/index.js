@@ -20117,7 +20117,7 @@ var PALETTES = {
 };
 var sprite = () => '<ellipse cx="-2.2" cy="4.6" rx="1.7" ry="1.1" fill="#3b4a6b"/><ellipse cx="2.2" cy="4.6" rx="1.7" ry="1.1" fill="#3b4a6b"/><circle r="4.7" fill="#f5f7fa" stroke="#3b4a6b" stroke-width="1"/><rect x="-3.6" y="1" width="7.2" height="2.4" rx="1.2" fill="#4c6fff"/><circle cx="-1.6" cy="-0.8" r="0.8" fill="#222"/><circle cx="1.6" cy="-0.8" r="0.8" fill="#222"/><path d="M0,-4.6 L0,-5.8" stroke="#3b4a6b" stroke-width="0.8"/><circle cy="-6.2" r="1.5" fill="#ff4d6d"/>';
 var DESC = (total) => `An animated Bomberman level built from a GitHub contribution graph (${total} contributions). A character places bombs that blow up the commit blocks, one by one, until the board is clear.`;
-function renderSvg(weeks, lvl, plan, theme = "light") {
+function renderSvg(weeks, lvl, plan, theme = "light", scale = 1) {
   const P = typeof theme === "string" ? PALETTES[theme] : theme;
   const W = COLS * STEP, H = ROWS * STEP;
   const T = plan.T, C = T + HOLD, F = T / C, CS = C.toFixed(2);
@@ -20203,7 +20203,7 @@ function renderSvg(weeks, lvl, plan, theme = "light") {
   }
   const fin = (F * 100).toFixed(1), fin2 = (F * 100 + 3).toFixed(1);
   const totalStr = String(total).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -4 ${W + 8} ${H + 34}" width="${W + 8}" height="${H + 34}" role="img"><title>Commit Bomberman</title><desc>${DESC(total)}</desc><style>.l0{fill:${P.l0}}.l1{fill:${P.l1}}.l2{fill:${P.l2}}.l3{fill:${P.l3}}.l4{fill:${P.l4}}.in{fill:none;stroke:rgba(255,255,255,.4);stroke-width:1}.crk{fill:none;stroke:${P.crk};stroke-width:1;stroke-linecap:round;opacity:0}.c{transform-box:fill-box;transform-origin:center}.bb{fill:${P.bomb};stroke:${P.bombStroke};stroke-width:1}.tx{fill:${P.tx};font:500 13px sans-serif}.fo{fill:#ff8a1f}.fi{fill:#ffe27a}.s{opacity:0;transform-box:fill-box;transform-origin:center;animation-duration:${CS}s;animation-iteration-count:infinite;animation-timing-function:ease-out}.d1{animation-name:sh1}.d2{animation-name:sh2}.d3{animation-name:sh3}.d4{animation-name:sh4}.fx{opacity:0;animation:fx ${CS}s linear infinite}@keyframes fx{0%{opacity:1}${(FW * 0.6).toFixed(3)}%{opacity:1}${FW.toFixed(3)}%{opacity:0}100%{opacity:0}}.bm{opacity:0;animation-iteration-count:infinite;animation-timing-function:linear}.shd{fill:rgba(76,201,240,.2);stroke:#4cc9f0;stroke-width:1;opacity:0;animation-iteration-count:infinite;animation-timing-function:linear}.pl{transform-box:fill-box;transform-origin:center;animation:pulse .28s ease-in-out infinite alternate}@keyframes pulse{from{transform:scale(1)}to{transform:scale(1.18)}}.spk{fill:#ffb02e;animation:blink .16s steps(2) infinite}@keyframes blink{50%{opacity:.2}}.fin{opacity:0;animation:fin ${CS}s linear infinite}@keyframes fin{0%,${fin}%{opacity:0}${fin2}%,96%{opacity:1}100%{opacity:0}}` + shKf + css + // Reduced motion: no animation at all. The board is shown as a plain contribution graph, because
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -4 ${W + 8} ${H + 34}" width="${+((W + 8) * scale).toFixed(2)}" height="${+((H + 34) * scale).toFixed(2)}" role="img"><title>Commit Bomberman</title><desc>${DESC(total)}</desc><style>.l0{fill:${P.l0}}.l1{fill:${P.l1}}.l2{fill:${P.l2}}.l3{fill:${P.l3}}.l4{fill:${P.l4}}.in{fill:none;stroke:rgba(255,255,255,.4);stroke-width:1}.crk{fill:none;stroke:${P.crk};stroke-width:1;stroke-linecap:round;opacity:0}.c{transform-box:fill-box;transform-origin:center}.bb{fill:${P.bomb};stroke:${P.bombStroke};stroke-width:1}.tx{fill:${P.tx};font:500 13px sans-serif}.fo{fill:#ff8a1f}.fi{fill:#ffe27a}.s{opacity:0;transform-box:fill-box;transform-origin:center;animation-duration:${CS}s;animation-iteration-count:infinite;animation-timing-function:ease-out}.d1{animation-name:sh1}.d2{animation-name:sh2}.d3{animation-name:sh3}.d4{animation-name:sh4}.fx{opacity:0;animation:fx ${CS}s linear infinite}@keyframes fx{0%{opacity:1}${(FW * 0.6).toFixed(3)}%{opacity:1}${FW.toFixed(3)}%{opacity:0}100%{opacity:0}}.bm{opacity:0;animation-iteration-count:infinite;animation-timing-function:linear}.shd{fill:rgba(76,201,240,.2);stroke:#4cc9f0;stroke-width:1;opacity:0;animation-iteration-count:infinite;animation-timing-function:linear}.pl{transform-box:fill-box;transform-origin:center;animation:pulse .28s ease-in-out infinite alternate}@keyframes pulse{from{transform:scale(1)}to{transform:scale(1.18)}}.spk{fill:#ffb02e;animation:blink .16s steps(2) infinite}@keyframes blink{50%{opacity:.2}}.fin{opacity:0;animation:fin ${CS}s linear infinite}@keyframes fin{0%,${fin}%{opacity:0}${fin2}%,96%{opacity:1}100%{opacity:0}}` + shKf + css + // Reduced motion: no animation at all. The board is shown as a plain contribution graph, because
   // everything that appears during the game (bombs, flames, debris, caption) has opacity 0 by default.
   // SMIL cannot be switched off from CSS, so the character is hidden instead.
   `@media (prefers-reduced-motion:reduce){*{animation:none!important}.w{display:none}}</style>` + floor + blocksSvg + debris + fx + bombs + walker + shields + `<text class="tx fin" x="${W / 2}" y="${H + 22}" text-anchor="middle">all clear &#183; ${totalStr} commits</text></svg>`;
@@ -20214,7 +20214,7 @@ function generateAll(weeks, specs, ghLevels) {
   const lvl = levelsFromGitHub(weeks, ghLevels);
   return specs.map((spec) => {
     const plan = fitDuration(planBomber(weeks, lvl, { R: spec.radius }), spec.maxSeconds);
-    return { spec, plan, svg: renderSvg(weeks, lvl, plan, spec.palette) };
+    return { spec, plan, svg: renderSvg(weeks, lvl, plan, spec.palette, spec.scale) };
   });
 }
 function describePlan(p) {
@@ -20225,6 +20225,7 @@ function describePlan(p) {
 var HEX = /^[0-9a-fA-F]{6}$/;
 var DEFAULT_MAX_SECONDS = 45;
 var DEFAULT_RADIUS = 2;
+var DEFAULT_SCALE = 1;
 function parseOutputs(input) {
   const lines = input.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith("#"));
   if (!lines.length) throw new Error("`outputs` is empty: give at least one file path, e.g. dist/bombgrid.svg");
@@ -20259,7 +20260,8 @@ function parseLine(line) {
   }
   const maxSeconds = num(q.get("max_seconds"), DEFAULT_MAX_SECONDS, "max_seconds", path, 5, 120);
   const radius = Math.round(num(q.get("radius"), DEFAULT_RADIUS, "radius", path, 1, 6));
-  return { path, palette, paletteName, maxSeconds, radius };
+  const scale = num(q.get("scale"), DEFAULT_SCALE, "scale", path, 0.5, 4);
+  return { path, palette, paletteName, maxSeconds, radius, scale };
 }
 function num(raw, def, name, path, min, max) {
   if (raw === null) return def;
