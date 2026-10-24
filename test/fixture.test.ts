@@ -83,9 +83,10 @@ test("with GitHub levels every block gets the shade GitHub shows", () => {
   const counts = normalizeGrid(calendar.counts);
   const levels = normalizeGrid(calendar.levels);
   const svg = withLevels[0].svg;
-  // blocks are drawn as <rect class="lN" .../> inside <g class="c">; count them per level
+  // blocks of the animated layer are <rect class="lN" .../> right after their fade animation; count them per level
   const drawn = [0, 0, 0, 0, 0];
-  for (const m of svg.matchAll(/<g class="c"[^>]*><rect class="l([1-4])"/g)) drawn[+m[1]]++;
+  const animated = svg.slice(svg.indexOf('<g class="anim">'), svg.indexOf('<g class="rm">'));
+  for (const m of animated.matchAll(/<g>(?:<animate[^>]*\/>)?<rect class="l([1-4])"/g)) drawn[+m[1]]++;
   const expected = [0, 0, 0, 0, 0];
   counts.forEach((col, c) =>
     col.forEach((n, r) => {

@@ -24,8 +24,8 @@ jobs:
           github_user_name: ${{ github.repository_owner }}
           github_token: ${{ github.token }}
           outputs: |
-            out/bombgrid.svg
-            out/bombgrid-dark.svg?palette=dark
+            out/bombgrid.svg?scale=1.17
+            out/bombgrid-dark.svg?palette=dark&scale=1.17
       - name: Publish to the output branch
         run: |
           test -s out/bombgrid.svg && test -s out/bombgrid-dark.svg   # stop if generation produced nothing

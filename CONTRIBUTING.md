@@ -21,7 +21,7 @@ Node 20 or newer is required.
 
 ## Ground rules
 
-- The renderer must stay pure SVG: CSS keyframes only (one clock for everything, no SMIL), no scripts.
+- The renderer must stay pure SVG with no scripts. Everything that depends on time must be a SMIL animation on the one shared timeline (same `dur`, `begin="0s"`); do not mix in CSS animations that carry timing, because each CSS animation gets its own start time and they can drift apart on slow devices.
 - Do not copy code, art or text from other projects.
 - Please say clearly what you tested and what you did not.
 

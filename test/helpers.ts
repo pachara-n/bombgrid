@@ -39,16 +39,19 @@ export function checkSvg(svg: string): string[] {
   if (/NaN|undefined|Infinity/.test(svg)) errs.push("svg contains NaN/undefined/Infinity");
   const valid = XMLValidator.validate(svg);
   if (valid !== true) errs.push(`svg is not well-formed XML: ${valid.err.msg}`);
-  for (const m of svg.matchAll(/keyTimes="([^"]*)"/g)) {
-    const a = m[1].split(";").map(Number);
+  // every SMIL animation needs keyTimes that pair up with its values and stay within [0,1]
+  for (const m of svg.matchAll(/<animate(?:Transform)?\s([^>]*)\/>/g)) {
+    const kt = /keyTimes="([^"]*)"/.exec(m[1])?.[1];
+    const vals = /values="([^"]*)"/.exec(m[1])?.[1];
+    if (!kt || !vals) continue;
+    const a = kt.split(";").map(Number);
     if (a.some((v) => !(v >= 0 && v <= 1))) errs.push("keyTimes out of [0,1]");
     for (let i = 1; i < a.length; i++)
       if (a[i] < a[i - 1]) {
         errs.push("keyTimes decreasing");
         break;
       }
+    if (a.length !== vals.split(";").length) errs.push("keyTimes/values length mismatch");
   }
-  for (const m of svg.matchAll(/keyPoints="([^"]*)"[^>]*keyTimes="([^"]*)"/g))
-    if (m[1].split(";").length !== m[2].split(";").length) errs.push("keyPoints/keyTimes length mismatch");
   return errs;
 }

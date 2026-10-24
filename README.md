@@ -12,7 +12,7 @@
 </picture>
 
 A little character walks over your last year of commits, drops bombs, and blows up the commit blocks one by one. It is a
-plain SVG (CSS animations only, no scripts, no GIF), so it works inside a profile README. The colours are the shades
+plain SVG (SMIL animation only, no scripts, no GIF), so it works inside a profile README. The colours are the shades
 GitHub shows on your own graph. The image above is rebuilt every day by this repository.
 
 ## Quick start
@@ -107,6 +107,7 @@ one. If the visitor asks the system for reduced motion, the SVG shows the plain 
   greedily: more blocks hit is better, a long walk is worse. If it is ever trapped it places the bomb anyway and shows a
   blue shield.
 - Busy years are sped up so the loop never exceeds `max_seconds`.
+- Character, bombs, flames and blocks all run on one SMIL timeline, so they cannot drift apart, even on a slow device.
 
 ## What is tested, and what is not
 
