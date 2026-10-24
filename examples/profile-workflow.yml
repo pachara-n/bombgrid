@@ -1,0 +1,34 @@
+# Copy this file to .github/workflows/bombgrid.yml in your profile repository (the repo named like your username).
+# It rebuilds the Bomberman level every day and publishes it to a branch called `output`.
+name: Generate bombgrid
+
+on:
+  schedule:
+    - cron: "0 0 * * *" # every day at midnight UTC
+  workflow_dispatch: # lets you run it by hand from the Actions tab
+
+# the job pushes the `output` branch, so it needs write access to contents
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pachara-n/bombgrid@v1
+        with:
+          github_user_name: ${{ github.repository_owner }}
+          outputs: |
+            dist/bombgrid.svg
+            dist/bombgrid-dark.svg?palette=dark
+      - name: Publish to the output branch
+        run: |
+          cd dist
+          git init -q -b output
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -q -m "chore: update bombgrid"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" output

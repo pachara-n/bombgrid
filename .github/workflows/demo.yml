@@ -1,0 +1,38 @@
+# Demo: builds the SVGs with this repo's own action every day and publishes them to the `output` branch.
+# The README shows the images from that branch, so the demo is always made by the code in main.
+name: Demo
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+# needs to push the `output` branch
+permissions:
+  contents: write
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # `./` means "the action in this very repository"
+      - uses: ./
+        id: bombgrid
+        with:
+          github_user_name: ${{ github.repository_owner }}
+          github_token: ${{ github.token }}
+          outputs: |
+            out/bombgrid.svg
+            out/bombgrid-dark.svg?palette=dark
+      - name: Publish to the output branch
+        run: |
+          test -s out/bombgrid.svg && test -s out/bombgrid-dark.svg   # stop if generation produced nothing
+          cd out
+          git init -q -b output
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -q -m "chore: update demo"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" output

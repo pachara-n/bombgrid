@@ -1,0 +1,36 @@
+# CI: runs on every push and pull request.
+# It type-checks, lints, tests and rebuilds the bundle, then fails if the committed dist/index.js is stale
+# (the action runs dist/index.js directly, so it must always match the source).
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# read-only is enough: CI never writes to the repo
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # third-party actions are pinned to a commit SHA (the comment says which version it is)
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm test
+      - run: npm run build
+      - name: dist/ must be up to date
+        run: |
+          git diff --exit-code -- dist/index.js || {
+            echo "::error::dist/index.js is stale. Run 'npm run build' and commit the result."
+            exit 1
+          }
