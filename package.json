@@ -1,0 +1,33 @@
+{
+  "name": "bombgrid",
+  "version": "0.1.0",
+  "description": "Turn your GitHub contribution graph into an animated Bomberman level (pure SVG).",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "tsx --test test/*.test.ts",
+    "build": "node scripts/build.mjs",
+    "generate": "tsx src/cli.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.5",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.13.0",
+    "prettier": "^3.9.10",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.0"
+  },
+  "dependencies": {
+    "@actions/core": "^3.0.1"
+  }
+}

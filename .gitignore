@@ -1,0 +1,26 @@
+# dependencies
+node_modules/
+
+# generated SVG output (dist/index.js, the bundled action, MUST stay committed)
+dist/*.svg
+out/
+
+# local handoff notes and research (not for the public repo)
+CLAUDE.md
+docs/
+
+# secrets / env
+.env
+.env.*
+*.pem
+
+# OS / editor / logs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
+
+# prototypes kept locally for comparison, not part of the published project
+reference/
+samples/
