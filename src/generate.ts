@@ -1,5 +1,5 @@
 // The one function both the CLI and the GitHub Action call: grid in, SVG strings out.
-import { levelsFor } from "./levels.ts";
+import { levelsFromGitHub } from "./levels.ts";
 import { fitDuration, planBomber } from "./planner.ts";
 import { renderSvg } from "./render.ts";
 import type { OutputSpec } from "./options.ts";
@@ -11,9 +11,12 @@ export interface Generated {
   plan: Plan;
 }
 
-/** Plans and renders one SVG per output spec (plans differ when radius or max_seconds differ). */
-export function generateAll(weeks: Grid, specs: OutputSpec[]): Generated[] {
-  const lvl = levelsFor(weeks);
+/**
+ * Plans and renders one SVG per output spec (plans differ when radius or max_seconds differ).
+ * `ghLevels` are the shades GitHub shows on the profile; pass them so the colours match the real graph.
+ */
+export function generateAll(weeks: Grid, specs: OutputSpec[], ghLevels?: Grid): Generated[] {
+  const lvl = levelsFromGitHub(weeks, ghLevels);
   return specs.map((spec) => {
     const plan = fitDuration(planBomber(weeks, lvl, { R: spec.radius }), spec.maxSeconds);
     return { spec, plan, svg: renderSvg(weeks, lvl, plan, spec.palette) };

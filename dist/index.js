@@ -19663,7 +19663,14 @@ function normalizeGrid(weeks) {
 }
 
 // src/fetch/graphql.ts
-var QUERY = `query($login:String!){user(login:$login){contributionsCollection{contributionCalendar{weeks{contributionDays{contributionCount weekday}}}}}}`;
+var QUERY = `query($login:String!){user(login:$login){contributionsCollection{contributionCalendar{weeks{contributionDays{contributionCount contributionLevel weekday}}}}}}`;
+var LEVELS = {
+  NONE: 0,
+  FIRST_QUARTILE: 1,
+  SECOND_QUARTILE: 2,
+  THIRD_QUARTILE: 3,
+  FOURTH_QUARTILE: 4
+};
 async function fromGraphQL(user, token, fetchImpl = fetch) {
   const res = await fetchImpl("https://api.github.com/graphql", {
     method: "POST",
@@ -19673,11 +19680,19 @@ async function fromGraphQL(user, token, fetchImpl = fetch) {
   const json = await res.json();
   const weeks = json?.data?.user?.contributionsCollection?.contributionCalendar?.weeks;
   if (!weeks) throw new Error("GraphQL failed: " + JSON.stringify(json).slice(0, 300));
-  return weeks.map((w) => {
-    const col = Array(ROWS).fill(null);
-    for (const d of w.contributionDays) col[d.weekday] = d.contributionCount;
-    return col;
-  });
+  const counts = [];
+  const levels = [];
+  for (const w of weeks) {
+    const cCol = Array(ROWS).fill(null);
+    const lCol = Array(ROWS).fill(null);
+    for (const d of w.contributionDays) {
+      cCol[d.weekday] = d.contributionCount;
+      lCol[d.weekday] = d.contributionLevel !== void 0 ? LEVELS[d.contributionLevel] ?? null : null;
+    }
+    counts.push(cCol);
+    levels.push(lCol);
+  }
+  return { counts, levels };
 }
 
 // src/fetch/html-fallback.ts
@@ -19685,7 +19700,8 @@ function parseContributionsHtml(html) {
   const tips = {};
   for (const m of html.matchAll(/for="(contribution-day-component-\d+-\d+)"[^>]*>\s*([^<]*)/g))
     tips[m[1]] = m[2].trim();
-  const grid = Array.from({ length: COLS }, () => Array(ROWS).fill(null));
+  const counts = Array.from({ length: COLS }, () => Array(ROWS).fill(null));
+  const levels = Array.from({ length: COLS }, () => Array(ROWS).fill(null));
   let seen = 0;
   for (const m of html.matchAll(/<td[^>]*>/g)) {
     const s = m[0];
@@ -19694,11 +19710,13 @@ function parseContributionsHtml(html) {
     const row = +id[2], col = +id[3];
     const cm = /^(\d+|No) contributions?/.exec(tips[id[1]] || "");
     if (!cm || col >= COLS) continue;
-    grid[col][row] = cm[1] === "No" ? 0 : +cm[1];
+    counts[col][row] = cm[1] === "No" ? 0 : +cm[1];
+    const lv = /data-level="([0-4])"/.exec(s);
+    levels[col][row] = lv ? +lv[1] : null;
     seen++;
   }
   if (!seen) throw new Error("HTML parse found no cells");
-  return grid;
+  return { counts, levels };
 }
 async function fromHtml(user, fetchImpl = fetch) {
   const res = await fetchImpl(`https://github.com/users/${user}/contributions`);
@@ -19709,21 +19727,25 @@ async function fromHtml(user, fetchImpl = fetch) {
 // src/fetch/index.ts
 async function fetchGrid(opts) {
   const { user, token, fetchImpl = fetch, warn = console.warn } = opts;
-  let weeks;
+  let raw;
   let source = "";
   if (token) {
     try {
-      weeks = await fromGraphQL(user, token, fetchImpl);
+      raw = await fromGraphQL(user, token, fetchImpl);
       source = "GraphQL API";
     } catch (e) {
       warn("GraphQL failed, falling back to public HTML: " + e.message);
     }
   }
-  if (!weeks) {
-    weeks = await fromHtml(user, fetchImpl);
+  if (!raw) {
+    raw = await fromHtml(user, fetchImpl);
     source = "public contributions page (fallback)";
   }
-  return { weeks: normalizeGrid(weeks), source };
+  return {
+    weeks: normalizeGrid(raw.counts),
+    levels: raw.levels ? normalizeGrid(raw.levels) : void 0,
+    source
+  };
 }
 
 // src/levels.ts
@@ -19732,6 +19754,30 @@ function levelsFor(weeks) {
   const q = (p) => nonZero[Math.min(nonZero.length - 1, Math.floor(nonZero.length * p))] ?? 1;
   const t1 = q(0.25), t2 = q(0.5), t3 = q(0.75);
   return (n) => !n ? 0 : n <= t1 ? 1 : n <= t2 ? 2 : n <= t3 ? 3 : 4;
+}
+function levelsFromGitHub(weeks, ghLevels) {
+  if (!ghLevels) return levelsFor(weeks);
+  const byCount = /* @__PURE__ */ new Map();
+  weeks.forEach(
+    (col, c) => col.forEach((n, r) => {
+      const lv = ghLevels[c]?.[r];
+      if (n === null || n <= 0 || lv === null || lv === void 0 || lv < 1 || lv > 4) return;
+      byCount.set(n, Math.max(byCount.get(n) ?? 1, lv));
+    })
+  );
+  if (!byCount.size) return levelsFor(weeks);
+  const known = [...byCount.keys()].sort((a, b) => a - b);
+  return (n) => {
+    if (!n) return 0;
+    const exact = byCount.get(n);
+    if (exact) return exact;
+    let best;
+    for (const k of known) {
+      if (k > n) break;
+      best = k;
+    }
+    return best === void 0 ? 1 : byCount.get(best);
+  };
 }
 
 // src/planner.ts
@@ -20164,8 +20210,8 @@ function renderSvg(weeks, lvl, plan, theme = "light") {
 }
 
 // src/generate.ts
-function generateAll(weeks, specs) {
-  const lvl = levelsFor(weeks);
+function generateAll(weeks, specs, ghLevels) {
+  const lvl = levelsFromGitHub(weeks, ghLevels);
   return specs.map((spec) => {
     const plan = fitDuration(planBomber(weeks, lvl, { R: spec.radius }), spec.maxSeconds);
     return { spec, plan, svg: renderSvg(weeks, lvl, plan, spec.palette) };
@@ -20240,9 +20286,9 @@ async function run() {
   const token = getInput("github_token");
   if (token) setSecret(token);
   const specs = parseOutputs(getInput("outputs", { required: true }));
-  const { weeks, source } = await fetchGrid({ user, token, warn: warning });
+  const { weeks, levels, source } = await fetchGrid({ user, token, warn: warning });
   info(`Contribution data source: ${source}`);
-  const results = generateAll(weeks, specs);
+  const results = generateAll(weeks, specs, levels);
   results.forEach((r, i) => info(`#${i + 1} ${r.spec.path}: ${describePlan(r.plan)}`));
   const written = writeOutputs(results);
   written.forEach((p, i) => info(`wrote ${p} (${(results[i].svg.length / 1024).toFixed(0)} KB)`));

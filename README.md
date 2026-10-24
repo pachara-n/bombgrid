@@ -83,7 +83,7 @@ If the visitor asks their system for reduced motion, the SVG shows the plain con
 ## How it works
 
 - The 53 x 7 grid is your last year. A day with commits is a block, a day without is floor, a day that does not exist yet is a wall.
-- Blocks get a level from 1 to 4 (quartiles of your non-zero days). Level 4 blocks need two hits.
+- Blocks get a level from 1 to 4. The shades are the ones GitHub shows on your profile (read from the API or the public page), so the colours match your real graph. Only for offline files, where GitHub gives no levels, the levels are quartiles of your non-zero days. Level 4 blocks need two hits.
 - A bomb blasts in a cross, up to `radius` cells, and stops at the first block in each direction (that block takes one hit).
 - The character only walks on floor, never through bombs, and always leaves the cross before the fuse ends.
   It picks the next bomb site greedily: more blocks hit is better, a long walk is worse.

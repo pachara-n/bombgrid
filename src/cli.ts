@@ -17,7 +17,7 @@ const out = arg("--out", "dist")!;
 const gridFile = arg("--grid");
 const maxSeconds = arg("--max-seconds", "45")!;
 
-let weeks, source: string;
+let weeks, levels, source: string;
 if (gridFile) {
   weeks = normalizeGrid(JSON.parse(readFileSync(gridFile, "utf8")));
   source = gridFile;
@@ -27,13 +27,13 @@ if (gridFile) {
     console.error("Set GH_USER or pass --grid <file>");
     process.exit(1);
   }
-  ({ weeks, source } = await fetchGrid({ user, token: process.env.GH_TOKEN || process.env.GITHUB_TOKEN }));
+  ({ weeks, levels, source } = await fetchGrid({ user, token: process.env.GH_TOKEN || process.env.GITHUB_TOKEN }));
 }
 
 const specs = parseOutputs(
   `${out}/bombgrid-light.svg?palette=light&max_seconds=${maxSeconds}\n${out}/bombgrid-dark.svg?palette=dark&max_seconds=${maxSeconds}`,
 );
-const results = generateAll(weeks, specs);
+const results = generateAll(weeks, specs, levels);
 console.log(`source=${source}`);
 console.log(describePlan(results[0].plan));
 for (const [i, p] of writeOutputs(results).entries())

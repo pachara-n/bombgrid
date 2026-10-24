@@ -1,12 +1,15 @@
 import type { Grid } from "../types.ts";
 import { normalizeGrid } from "./grid.ts";
 import { fromGraphQL } from "./graphql.ts";
+import type { RawCalendar } from "./graphql.ts";
 import { fromHtml } from "./html-fallback.ts";
 
 export { normalizeGrid };
 
 export interface FetchResult {
   weeks: Grid;
+  /** GitHub's own shade (0..4) for every day, when the source provided it */
+  levels?: Grid;
   /** human readable name of the source that worked, so it can be logged */
   source: string;
 }
@@ -22,19 +25,23 @@ export async function fetchGrid(opts: {
   warn?: (msg: string) => void;
 }): Promise<FetchResult> {
   const { user, token, fetchImpl = fetch, warn = console.warn } = opts;
-  let weeks: (number | null)[][] | undefined;
+  let raw: RawCalendar | undefined;
   let source = "";
   if (token) {
     try {
-      weeks = await fromGraphQL(user, token, fetchImpl);
+      raw = await fromGraphQL(user, token, fetchImpl);
       source = "GraphQL API";
     } catch (e) {
       warn("GraphQL failed, falling back to public HTML: " + (e as Error).message);
     }
   }
-  if (!weeks) {
-    weeks = await fromHtml(user, fetchImpl);
+  if (!raw) {
+    raw = await fromHtml(user, fetchImpl);
     source = "public contributions page (fallback)";
   }
-  return { weeks: normalizeGrid(weeks), source };
+  return {
+    weeks: normalizeGrid(raw.counts),
+    levels: raw.levels ? normalizeGrid(raw.levels) : undefined,
+    source,
+  };
 }

@@ -11,10 +11,10 @@ async function run() {
   if (token) core.setSecret(token);
   const specs = parseOutputs(core.getInput("outputs", { required: true }));
 
-  const { weeks, source } = await fetchGrid({ user, token, warn: core.warning });
+  const { weeks, levels, source } = await fetchGrid({ user, token, warn: core.warning });
   core.info(`Contribution data source: ${source}`);
 
-  const results = generateAll(weeks, specs);
+  const results = generateAll(weeks, specs, levels);
   results.forEach((r, i) => core.info(`#${i + 1} ${r.spec.path}: ${describePlan(r.plan)}`));
   const written = writeOutputs(results);
   written.forEach((p, i) => core.info(`wrote ${p} (${(results[i].svg.length / 1024).toFixed(0)} KB)`));

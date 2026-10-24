@@ -33,11 +33,11 @@ test("GraphQL: maps weekday to row and leaves missing days null", async () => {
               weeks: [
                 {
                   contributionDays: [
-                    { contributionCount: 4, weekday: 0 },
-                    { contributionCount: 0, weekday: 1 },
+                    { contributionCount: 4, contributionLevel: "SECOND_QUARTILE", weekday: 0 },
+                    { contributionCount: 0, contributionLevel: "NONE", weekday: 1 },
                   ],
                 },
-                { contributionDays: [{ contributionCount: 9, weekday: 6 }] },
+                { contributionDays: [{ contributionCount: 9, contributionLevel: "FOURTH_QUARTILE", weekday: 6 }] },
               ],
             },
           },
@@ -46,18 +46,21 @@ test("GraphQL: maps weekday to row and leaves missing days null", async () => {
     });
   }) as unknown as typeof fetch;
 
-  const { weeks, source } = await fetchGrid({ user: "octo", token: "t0k3n", fetchImpl: fake });
+  const { weeks, levels, source } = await fetchGrid({ user: "octo", token: "t0k3n", fetchImpl: fake });
   assert.equal(source, "GraphQL API");
   assert.equal(sentAuth, "bearer t0k3n");
   assert.deepEqual(weeks[COLS - 2], [4, 0, null, null, null, null, null]);
   assert.equal(weeks[COLS - 1][6], 9);
+  // GitHub's own shades come along
+  assert.deepEqual(levels![COLS - 2], [2, 0, null, null, null, null, null]);
+  assert.equal(levels![COLS - 1][6], 4);
 });
 
 test("falls back to the public page when GraphQL fails, and warns", async () => {
   const html =
-    `<td id="contribution-day-component-0-0" data-date="2026-01-01"></td>` +
+    `<td id="contribution-day-component-0-0" data-date="2026-01-01" data-level="1"></td>` +
     `<tool-tip for="contribution-day-component-0-0">3 contributions on January 1st.</tool-tip>` +
-    `<td id="contribution-day-component-1-0" data-date="2026-01-02"></td>` +
+    `<td id="contribution-day-component-1-0" data-date="2026-01-02" data-level="0"></td>` +
     `<tool-tip for="contribution-day-component-1-0">No contributions on January 2nd.</tool-tip>`;
   const fake = (async (url: string) =>
     String(url).includes("graphql")
@@ -65,7 +68,7 @@ test("falls back to the public page when GraphQL fails, and warns", async () => 
       : new Response(html, { status: 200 })) as unknown as typeof fetch;
 
   const warnings: string[] = [];
-  const { weeks, source } = await fetchGrid({
+  const { weeks, levels, source } = await fetchGrid({
     user: "octo",
     token: "bad",
     fetchImpl: fake,
@@ -78,6 +81,8 @@ test("falls back to the public page when GraphQL fails, and warns", async () => 
   assert.equal(weeks[0][0], 3);
   assert.equal(weeks[0][1], 0);
   assert.equal(weeks[0][2], null); // cells missing from the page stay walls
+  assert.equal(levels![0][0], 1);
+  assert.equal(levels![0][1], 0);
 });
 
 test("HTML parser throws when the markup has no cells (GitHub changed its page)", () => {
