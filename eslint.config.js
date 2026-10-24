@@ -3,7 +3,7 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   // dist/ is generated, fixtures are data
-  { ignores: ["dist/", "node_modules/", "fixtures/", "assets/"] },
+  { ignores: ["dist/", "out/", "node_modules/", "fixtures/", "assets/", "reference/", "samples/"] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

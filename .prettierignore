@@ -1,4 +1,7 @@
 dist/
+out/
+reference/
+samples/
 node_modules/
 fixtures/
 assets/
