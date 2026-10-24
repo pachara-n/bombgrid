@@ -1,0 +1,36 @@
+name: "bombgrid"
+description: "Turn your GitHub contribution graph into an animated Bomberman level (pure SVG, light and dark)."
+author: "pachara-n"
+
+# Same input names as other contribution-graph actions, so switching takes a minute.
+inputs:
+  github_user_name:
+    description: "GitHub login whose contribution graph is drawn."
+    required: true
+  github_token:
+    description: "Token used to read the contribution calendar through the GraphQL API. Without it the public page is scraped (less reliable)."
+    required: false
+    default: ${{ github.token }}
+  outputs:
+    description: |
+      One output file per line, as `path[?options]`. Options: palette=light|dark, colors=<5 hex values>,
+      max_seconds=5..120 (default 45), radius=1..6 (default 2).
+      Example:
+        dist/bombgrid.svg
+        dist/bombgrid-dark.svg?palette=dark
+    required: false
+    default: |
+      dist/bombgrid.svg
+      dist/bombgrid-dark.svg?palette=dark
+
+outputs:
+  files:
+    description: "Newline separated list of the files that were written."
+
+runs:
+  using: node24
+  main: dist/index.js
+
+branding:
+  icon: grid
+  color: green
