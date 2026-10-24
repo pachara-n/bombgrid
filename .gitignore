@@ -24,3 +24,8 @@ Thumbs.db
 # prototypes kept locally for comparison, not part of the published project
 reference/
 samples/
+
+# local tooling state
+.claude/
+coverage/
+*.tsbuildinfo
