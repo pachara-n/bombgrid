@@ -4,6 +4,7 @@
 
 [![CI](https://github.com/pachara-n/bombgrid/actions/workflows/ci.yml/badge.svg)](https://github.com/pachara-n/bombgrid/actions/workflows/ci.yml)
 [![release](https://img.shields.io/github/v/release/pachara-n/bombgrid)](https://github.com/pachara-n/bombgrid/releases)
+[![marketplace](https://img.shields.io/badge/marketplace-bombgrid-2ea44f?logo=github)](https://github.com/marketplace/actions/bombgrid)
 [![license](https://img.shields.io/badge/license-MIT-blue)](#license)
 
 <picture>
